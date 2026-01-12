@@ -1,0 +1,7 @@
+[install]
+# Automatically install peer dependencies
+peer = true
+
+[install.lockfile]
+# Save the lockfile
+save = true

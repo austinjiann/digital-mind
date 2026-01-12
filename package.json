@@ -1,0 +1,20 @@
+{
+  "name": "digital-mind",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "bun run --parallel dev:*",
+    "dev:web": "cd apps/web && bun run dev",
+    "dev:api": "cd apps/api && bun run --hot src/index.ts",
+    "dev:agent": "cd apps/agent && bun run --hot src/index.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/bun": "latest"
+  }
+}
