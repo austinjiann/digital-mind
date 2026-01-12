@@ -1,3 +1,5 @@
+import { handleConnection } from "./connection";
+
 const port = parseInt(process.env.PORT || "3002", 10);
 
 const server = Bun.serve({
@@ -15,8 +17,7 @@ const server = Bun.serve({
       (ws as any).data = { state: "IDLE" };
     },
     message(ws, message) {
-      console.log("Received:", message);
-      // TODO: Implement message handling
+      handleConnection(ws as any, message);
     },
     close(ws) {
       console.log("Client disconnected");
