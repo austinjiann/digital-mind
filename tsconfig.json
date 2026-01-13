@@ -10,10 +10,5 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true
-  },
-  "references": [
-    { "path": "./apps/api" },
-    { "path": "./apps/agent" },
-    { "path": "./packages/shared" }
-  ]
+  }
 }

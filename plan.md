@@ -965,18 +965,21 @@ export interface RetrievedChunk {
 }
 
 export async function retrieve(query: string, topK = 5): Promise<RetrievedChunk[]> {
-  const embedding = await embedQuery(query);
+  const queryEmbedding = await embedQuery(query);
+
+  // Convert to string format for PostgreSQL vector casting
+  const embeddingStr = `[${queryEmbedding.join(",")}]`;
 
   // Vector similarity search
   const { data, error } = await supabase.rpc("match_chunks", {
-    query_embedding: embedding,
-    match_threshold: 0.7,
+    query_embedding: embeddingStr,
+    match_threshold: 0.2,
     match_count: topK,
   });
 
   if (error) throw error;
 
-  return data;
+  return data || [];
 }
 ```
 
@@ -984,8 +987,10 @@ You'll need this Postgres function:
 
 ```sql
 -- Add to your Supabase SQL
+-- NOTE: Must accept TEXT and cast internally - Supabase JS can't serialize arrays to vector type
+-- NOTE: Must ORDER BY alias, not <=> operator directly (causes silent failure in plpgsql)
 create or replace function match_chunks(
-  query_embedding vector(1536),
+  query_embedding text,
   match_threshold float,
   match_count int
 )
@@ -996,19 +1001,26 @@ returns table (
   score float,
   filename text
 )
-language sql stable
+language plpgsql
 as $$
-  select 
-    chunks.id,
-    chunks.document_id,
-    chunks.content,
-    1 - (chunks.embedding <=> query_embedding) as score,
-    documents.filename
-  from chunks
-  join documents on documents.id = chunks.document_id
-  where 1 - (chunks.embedding <=> query_embedding) > match_threshold
-  order by chunks.embedding <=> query_embedding
-  limit match_count;
+declare
+  query_vec vector(1536);
+begin
+  query_vec := query_embedding::vector(1536);
+
+  return query
+    select
+      c.id,
+      c.document_id,
+      c.content,
+      (1 - (c.embedding <=> query_vec))::float as s,
+      d.filename
+    from chunks c
+    join documents d on d.id = c.document_id
+    where (1 - (c.embedding <=> query_vec))::float > match_threshold
+    order by s desc
+    limit match_count;
+end;
 $$;
 ```
 

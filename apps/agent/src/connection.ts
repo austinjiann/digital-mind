@@ -68,6 +68,13 @@ async function handleUserText(
     const sources = await retrieve(content);
     const retrievalMs = Date.now() - retrievalStart;
 
+    // DEBUG: Log what was retrieved
+    console.log("Query:", content);
+    console.log("Retrieved sources:", sources.length);
+    sources.forEach((s, i) => {
+      console.log(`  [${i}] score: ${s.score.toFixed(3)}, content: ${s.content.slice(0, 100)}...`);
+    });
+
     // Send sources
     ws.send(
       JSON.stringify({
