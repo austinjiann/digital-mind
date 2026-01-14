@@ -146,11 +146,11 @@ class TTSService:
 
         return {"voice_id": voice_id, "status": "created", "clips": len(paths)}
 
-    def _estimate_duration(self, text: str, chars_per_second: float = 14.0) -> float:
+    def _estimate_duration(self, text: str, chars_per_second: float = 11.0) -> float:
         """Estimate expected audio duration based on text length."""
-        # Tighter estimate to cut gibberish earlier
+        # Conservative: ~11 chars/sec with generous buffer
         base_duration = len(text) / chars_per_second
-        return base_duration * 1.2  # 20% buffer
+        return base_duration * 1.6  # 60% buffer to avoid cutting off
 
     def _trim_audio(self, wav, text: str, sample_rate: int = 24000):
         """Trim audio to expected duration + buffer."""
@@ -196,7 +196,7 @@ class TTSService:
             repetition_penalty=5.0,  # Still prevent repetition but less strict
             top_k=50,  # Allow more variation
             top_p=0.8,  # More natural sampling
-            speed=1.15,  # Slightly faster speech
+            speed=1.0,  # Normal speed
             enable_text_splitting=False,  # Don't split text internally
         )
 

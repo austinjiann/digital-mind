@@ -20,10 +20,73 @@ export class TTSClient {
   }
 
   /**
-   * Clean text for TTS - remove problematic characters
+   * Tech terms to natural pronunciation
+   */
+  private readonly techTerms: [RegExp, string][] = [
+    // Frameworks with .js - match variations
+    [/Next\.?js/gi, "Next JS"],
+    [/Node\.?js/gi, "Node JS"],
+    [/React\.?js/gi, "React"],
+    [/Vue\.?js/gi, "View JS"],
+    [/Express\.?js/gi, "Express"],
+    [/Three\.?js/gi, "Three JS"],
+    // Acronyms - use word boundaries
+    [/\bAPIs?\b/g, "A P I"],
+    [/\bUI\b/g, "U I"],
+    [/\bUX\b/g, "U X"],
+    [/\bCSS\b/g, "C S S"],
+    [/\bHTML\b/g, "H T M L"],
+    [/\bAWS\b/g, "A W S"],
+    [/\bGCP\b/g, "G C P"],
+    [/\bCLI\b/g, "C L I"],
+    [/\bSDK\b/g, "S D K"],
+    [/\bIDE\b/g, "I D E"],
+    [/\bNPM\b/g, "N P M"],
+    [/\bURL\b/g, "U R L"],
+    [/\bJSON\b/gi, "jay-son"],
+    [/\bYAML\b/gi, "yammel"],
+    [/\bOAuth\b/gi, "oh-auth"],
+    [/\bJWT\b/g, "J W T"],
+    [/\bREST\b/g, "rest"],
+    [/\bGraphQL\b/gi, "graph Q L"],
+    [/\bLLM\b/g, "L L M"],
+    [/\bGPT\b/g, "G P T"],
+    [/\bRAG\b/g, "rag"],
+    [/\bSQL\b/gi, "sequel"],
+    [/\bNoSQL\b/gi, "no sequel"],
+    // Compound words
+    [/TypeScript/gi, "Type Script"],
+    [/JavaScript/gi, "Java Script"],
+    [/GitHub/gi, "Git Hub"],
+    [/GitLab/gi, "Git Lab"],
+    [/VS\s?Code/gi, "V S Code"],
+    [/PostgreSQL/gi, "postgres"],
+    [/MongoDB/gi, "mongo D B"],
+    [/Firebase/gi, "fire base"],
+    [/Tailwind/gi, "tailwind"],
+    [/Kubernetes/gi, "kubernetes"],
+    [/\bk8s\b/gi, "kubernetes"],
+    [/DevOps/gi, "dev ops"],
+    [/WebSocket/gi, "web socket"],
+    [/localhost/gi, "local host"],
+    [/OpenAI/gi, "open A I"],
+    [/Supabase/gi, "soopa base"],
+    [/Vercel/gi, "ver-sell"],
+    [/Hono/gi, "hoh-no"],
+  ];
+
+  /**
+   * Clean text for TTS - remove problematic characters and fix pronunciation
    */
   private cleanText(text: string): string {
-    return text
+    let cleaned = text;
+
+    // Replace tech terms with pronunciations
+    for (const [pattern, pronunciation] of this.techTerms) {
+      cleaned = cleaned.replace(pattern, pronunciation);
+    }
+
+    return cleaned
       .replace(/\.{2,}/g, ".") // Replace multiple dots with single
       .replace(/…/g, ".") // Replace ellipsis character
       .replace(/[*_~`#]/g, "") // Remove markdown characters
