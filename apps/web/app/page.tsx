@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AgentConnection } from "@/lib/websocket";
+import { StreamingAudioPlayer } from "@/lib/audio-player";
 
 interface Source {
   chunk_id: string;
@@ -22,6 +23,8 @@ interface Latency {
   retrieval_ms: number;
   llm_first_token_ms: number;
   llm_total_ms: number;
+  tts_first_chunk_ms?: number;
+  tts_total_ms?: number;
   total_ms: number;
 }
 
@@ -29,11 +32,13 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentResponse, setCurrentResponse] = useState("");
   const [currentSources, setCurrentSources] = useState<Source[]>([]);
   const [latency, setLatency] = useState<Latency | null>(null);
 
   const connectionRef = useRef<AgentConnection | null>(null);
+  const audioPlayerRef = useRef<StreamingAudioPlayer | null>(null);
   const currentMessageIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentResponseRef = useRef("");
@@ -45,12 +50,15 @@ export default function Chat() {
   }, [messages, currentResponse]);
 
   useEffect(() => {
+    // Initialize audio player
+    audioPlayerRef.current = new StreamingAudioPlayer();
+
     const wsUrl =
       process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002";
     const conn = new AgentConnection(wsUrl);
     connectionRef.current = conn;
 
-    conn.subscribe((event) => {
+    conn.subscribe(async (event) => {
       switch (event.type) {
         case "agent.thinking":
           setIsProcessing(true);
@@ -69,6 +77,20 @@ export default function Chat() {
         case "agent.token":
           setCurrentResponse(event.accumulated);
           currentResponseRef.current = event.accumulated;
+          break;
+
+        case "agent.audio_chunk":
+          if (event.is_last) {
+            // Audio stream finished
+            setIsSpeaking(false);
+          } else if (event.audio) {
+            // Start audio player if not already playing
+            if (!audioPlayerRef.current?.playing) {
+              await audioPlayerRef.current?.start();
+              setIsSpeaking(true);
+            }
+            await audioPlayerRef.current?.addChunk(event.audio);
+          }
           break;
 
         case "agent.done": {
@@ -106,14 +128,18 @@ export default function Chat() {
         case "agent.error":
           console.error("Agent error:", event.error);
           setIsProcessing(false);
+          setIsSpeaking(false);
           setCurrentResponse("");
           currentResponseRef.current = "";
+          audioPlayerRef.current?.stop();
           break;
 
         case "agent.interrupted":
           setIsProcessing(false);
+          setIsSpeaking(false);
           setCurrentResponse("");
           currentResponseRef.current = "";
+          audioPlayerRef.current?.stop();
           break;
       }
     });
@@ -140,6 +166,12 @@ export default function Chat() {
     setInput("");
   };
 
+  const handleInterrupt = () => {
+    audioPlayerRef.current?.stop();
+    setIsSpeaking(false);
+    connectionRef.current?.send({ type: "user.interrupt" });
+  };
+
   return (
     <div className="flex flex-col h-screen max-w-3xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-2">Digital Mind</h1>
@@ -149,8 +181,32 @@ export default function Chat() {
         <div className="text-xs text-gray-500 mb-4 font-mono bg-gray-100 p-2 rounded">
           <span className="mr-3">Retrieval: {latency.retrieval_ms}ms</span>
           <span className="mr-3">LLM TTFT: {latency.llm_first_token_ms}ms</span>
-          <span className="mr-3">LLM Total: {latency.llm_total_ms}ms</span>
+          <span className="mr-3">LLM: {latency.llm_total_ms}ms</span>
+          {latency.tts_first_chunk_ms !== undefined && (
+            <span className="mr-3">TTS TTFC: {latency.tts_first_chunk_ms}ms</span>
+          )}
+          {latency.tts_total_ms !== undefined && (
+            <span className="mr-3">TTS: {latency.tts_total_ms}ms</span>
+          )}
           <span className="font-bold">Total: {latency.total_ms}ms</span>
+        </div>
+      )}
+
+      {/* Speaking indicator */}
+      {isSpeaking && (
+        <div className="flex items-center gap-3 mb-4 p-2 bg-green-50 rounded-lg">
+          <div className="flex gap-1">
+            <span className="w-2 h-4 bg-green-500 rounded animate-[bounce_0.5s_ease-in-out_infinite]" />
+            <span className="w-2 h-4 bg-green-500 rounded animate-[bounce_0.5s_ease-in-out_infinite_0.1s]" style={{ animationDelay: "0.1s" }} />
+            <span className="w-2 h-4 bg-green-500 rounded animate-[bounce_0.5s_ease-in-out_infinite_0.2s]" style={{ animationDelay: "0.2s" }} />
+          </div>
+          <span className="text-sm text-green-700">Speaking...</span>
+          <button
+            onClick={handleInterrupt}
+            className="ml-auto text-sm px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
+          >
+            Stop
+          </button>
         </div>
       )}
 

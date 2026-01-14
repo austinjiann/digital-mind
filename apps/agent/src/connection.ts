@@ -1,6 +1,8 @@
 import { ClientEvent } from "@digital-mind/shared";
 import { retrieve, type RetrievedChunk } from "./services/retrieval";
 import { streamLLM } from "./services/llm";
+import { getTTSClient } from "./services/tts";
+import { SpeechChunker } from "./services/text-chunker";
 
 type State = "IDLE" | "LISTENING" | "PROCESSING" | "SPEAKING";
 
@@ -59,6 +61,17 @@ async function handleUserText(
   data.state = "PROCESSING";
   data.abortController = new AbortController();
   const startTime = Date.now();
+  const ttsClient = getTTSClient();
+  const chunker = new SpeechChunker();
+
+  let retrievalMs = 0;
+  let llmFirstTokenMs = 0;
+  let ttsFirstChunkMs: number | null = null;
+  const ttsStartTime = Date.now();
+
+  // Track TTS tasks
+  const ttsQueue: Promise<void>[] = [];
+  let audioChunkIndex = 0;
 
   try {
     // 1. Retrieve relevant chunks
@@ -66,13 +79,15 @@ async function handleUserText(
 
     const retrievalStart = Date.now();
     const sources = await retrieve(content);
-    const retrievalMs = Date.now() - retrievalStart;
+    retrievalMs = Date.now() - retrievalStart;
 
     // DEBUG: Log what was retrieved
     console.log("Query:", content);
     console.log("Retrieved sources:", sources.length);
     sources.forEach((s, i) => {
-      console.log(`  [${i}] score: ${s.score.toFixed(3)}, content: ${s.content.slice(0, 100)}...`);
+      console.log(
+        `  [${i}] score: ${s.score.toFixed(3)}, content: ${s.content.slice(0, 100)}...`
+      );
     });
 
     // Send sources
@@ -89,24 +104,52 @@ async function handleUserText(
       })
     );
 
-    // 2. Stream LLM response
+    // Helper to process speech chunk through TTS
+    const processSpeechChunk = async (text: string) => {
+      if (data.abortController?.signal.aborted) return;
+
+      try {
+        const audio = await ttsClient.synthesize(text);
+
+        if (data.abortController?.signal.aborted) return;
+
+        if (ttsFirstChunkMs === null) {
+          ttsFirstChunkMs = Date.now() - ttsStartTime;
+        }
+
+        ws.send(
+          JSON.stringify({
+            type: "agent.audio_chunk",
+            audio,
+            chunk_index: audioChunkIndex++,
+            is_last: false,
+          })
+        );
+      } catch (error) {
+        console.error("[TTS] Error:", error);
+      }
+    };
+
+    // 2. Stream LLM response + TTS
     const llmStart = Date.now();
-    let firstTokenTime: number | null = null;
     let accumulated = "";
 
     const systemPrompt = buildSystemPrompt(sources);
+
+    data.state = "SPEAKING";
 
     for await (const token of streamLLM(
       systemPrompt,
       content,
       data.abortController.signal
     )) {
-      if (!firstTokenTime) {
-        firstTokenTime = Date.now();
+      if (!llmFirstTokenMs) {
+        llmFirstTokenMs = Date.now() - llmStart;
       }
 
       accumulated += token;
 
+      // Send text token
       ws.send(
         JSON.stringify({
           type: "agent.token",
@@ -114,11 +157,37 @@ async function handleUserText(
           accumulated,
         })
       );
+
+      // Check for speakable chunk
+      const speechChunk = chunker.addToken(token);
+      if (speechChunk) {
+        // Start TTS in parallel, don't await
+        ttsQueue.push(processSpeechChunk(speechChunk));
+      }
     }
 
     const llmTotalMs = Date.now() - llmStart;
 
-    // 3. Done (no TTS yet)
+    // Flush remaining text
+    const finalChunk = chunker.flush();
+    if (finalChunk) {
+      ttsQueue.push(processSpeechChunk(finalChunk));
+    }
+
+    // Wait for all TTS to complete
+    await Promise.all(ttsQueue);
+
+    // Send final audio marker
+    ws.send(
+      JSON.stringify({
+        type: "agent.audio_chunk",
+        audio: "",
+        chunk_index: audioChunkIndex,
+        is_last: true,
+      })
+    );
+
+    // 3. Done
     data.state = "IDLE";
 
     ws.send(
@@ -126,8 +195,10 @@ async function handleUserText(
         type: "agent.done",
         latency: {
           retrieval_ms: retrievalMs,
-          llm_first_token_ms: firstTokenTime ? firstTokenTime - llmStart : 0,
+          llm_first_token_ms: llmFirstTokenMs,
           llm_total_ms: llmTotalMs,
+          tts_first_chunk_ms: ttsFirstChunkMs || 0,
+          tts_total_ms: Date.now() - ttsStartTime,
           total_ms: Date.now() - startTime,
         },
       })

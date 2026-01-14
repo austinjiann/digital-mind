@@ -1,0 +1,112 @@
+[
+  {
+    "path": "conversational_clip_000.wav",
+    "duration": 11.25,
+    "text": "What do I think about school? Honestly, I see school mainly as a place to meet people that are really cool. The GPA stuff matters less to me than the connections and building opportunities."
+  },
+  {
+    "path": "conversational_clip_001.wav",
+    "duration": 6.69,
+    "text": "I also see myself, if not founding, joining a really hot startup that I really really care about."
+  },
+  {
+    "path": "conversational_clip_002.wav",
+    "duration": 11.7,
+    "text": "What do I do when I'm stressed? I play badminton and hit the gym. Physical activity helps me reset. I also just spend time with friends and family. Those are the things that ground me and keep me humble."
+  },
+  {
+    "path": "conversational_clip_003.wav",
+    "duration": 11.86,
+    "text": "What about the gym? I follow a push-pull-legs routine, PPL. I believe health is wealth. You know, you should try to get as fit as possible if you're young. Taking care of your body is non-negotiable, in my opinion."
+  },
+  {
+    "path": "conversational_clip_004.wav",
+    "duration": 9.68,
+    "text": "What music do I listen to? I listen to Chinese pop, some rap, and artists like Daniel Caesar and Keshi. Pretty varied taste. Sometimes I'll put in some rap too, like"
+  },
+  {
+    "path": "conversational_clip_005.wav",
+    "duration": 4.0,
+    "text": "I don't even know Lotteka. What's my guilty pleasure?"
+  },
+  {
+    "path": "conversational_clip_006.wav",
+    "duration": 4.1,
+    "text": "I like bubble tea. I drink a lot of it and it's just really good man."
+  },
+  {
+    "path": "personal_clip_000.wav",
+    "duration": 7.69,
+    "text": "That feeling of seeing your work in other people's hands is honestly addicting and this is why I keep building."
+  },
+  {
+    "path": "personal_clip_001.wav",
+    "duration": 7.1,
+    "text": "High school was a turning point, grade 11 specifically. That's when I started taking things seriously."
+  },
+  {
+    "path": "personal_clip_002.wav",
+    "duration": 8.64,
+    "text": "University applications were coming up, and I realized this could change the direction of my life. The pressure was real, but it pushed me to focus."
+  },
+  {
+    "path": "personal_clip_003.wav",
+    "duration": 11.51,
+    "text": "There's this misconception people have about me, they think I have no life because all I want to do is code and build stuff, but that's not true at all. Coding is my passion, it's what makes me happy, just because the idea of"
+  },
+  {
+    "path": "personal_clip_004.wav",
+    "duration": 5.73,
+    "text": "Shipping a project doesn't mean I'm missing out on life. I'm living exactly how I want to live."
+  },
+  {
+    "path": "personal_clip_005.wav",
+    "duration": 7.86,
+    "text": "I've changed my mind about things over time. I used to think dating would hold you back from your goals and also thought that"
+  },
+  {
+    "path": "personal_clip_006.wav",
+    "duration": 8.29,
+    "text": "Traveling is a bad thing. I didn't like going out much. I just wanted to stay in my room, but traveling opens your eyes to a whole new world."
+  },
+  {
+    "path": "personal_clip_007.wav",
+    "duration": 7.64,
+    "text": "One thing I'm stubborn about is fitness. You should try to get as jacked and healthy as possible. Health is wealth, no exceptions on that one."
+  },
+  {
+    "path": "personal_clip_008.wav",
+    "duration": 11.44,
+    "text": "5 years from now, I hope to have a lot more experience under my belt, worked at some startups, maybe tried big tech, learned about product management, and ideally, I'll be starting my own company with my best friends."
+  },
+  {
+    "path": "personal_clip_009.wav",
+    "duration": 5.28,
+    "text": "building something meaningful together. And hopefully I'll find a girlfriend or something, I don't even know man."
+  },
+  {
+    "path": "wiki_clip_000.wav",
+    "duration": 4.25,
+    "text": "computer vision, and natural language processing."
+  },
+  {
+    "path": "wiki_clip_001.wav",
+    "duration": 9.38,
+    "text": "The introduction of the IBM personal computer in 1981 helped establish standards that would shape the industry for decades."
+  },
+  {
+    "path": "wiki_clip_002.wav",
+    "duration": 7.88,
+    "text": "This shift has lowered the barrier to entry for startups and enabled rapid scaling of applications."
+  },
+  {
+    "path": "wiki_clip_003.wav",
+    "duration": 11.84,
+    "text": "This innovation sparked an industry transformation, with Android emerging as the competing platform and mobile apps becoming a dominant form of software distribution."
+  },
+  {
+    "path": "wiki_clip_004.wav",
+    "duration": 11.14,
+    "text": "Programming languages have evolved significantly since the early days of computing. Assembly language gave programmers more readable code than raw machine instructions."
+  }
+]
