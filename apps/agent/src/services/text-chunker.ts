@@ -6,13 +6,19 @@ export class SpeechChunker {
   private buffer = "";
   private minChunkLength = 100; // Longer chunks = fewer pauses
   private maxChunkLength = 400; // Allow longer chunks for smoother speech
+  private isFirstChunk = true;
 
   /**
-   * Add filler to sentence endings to fill the pause while next chunk loads.
+   * Add filler at the beginning of non-first chunks to fill the pause
+   * from the previous chunk finishing.
    */
-  private addFiller(chunk: string): string {
-    // Add "hmm" after sentences to fill the longer pause
-    return chunk + ", hmm";
+  private maybeAddFiller(chunk: string): string {
+    if (this.isFirstChunk) {
+      this.isFirstChunk = false;
+      return chunk;
+    }
+    // Add "Um," at the start to fill the gap after previous chunk
+    return "Um, " + chunk;
   }
 
   /**
@@ -26,7 +32,7 @@ export class SpeechChunker {
     if (sentenceMatch && sentenceMatch[1].length >= this.minChunkLength) {
       const chunk = sentenceMatch[1].trim();
       this.buffer = sentenceMatch[2];
-      return this.addFiller(chunk);
+      return this.maybeAddFiller(chunk);
     }
 
     // Check for clause boundary if buffer is getting long (comma, semicolon, etc)
@@ -35,7 +41,7 @@ export class SpeechChunker {
       if (clauseMatch && clauseMatch[1].length >= this.minChunkLength) {
         const chunk = clauseMatch[1].trim();
         this.buffer = clauseMatch[2];
-        return chunk;
+        return this.maybeAddFiller(chunk);
       }
     }
 
@@ -46,7 +52,7 @@ export class SpeechChunker {
       if (lastSpace > this.minChunkLength) {
         const chunk = this.buffer.slice(0, lastSpace).trim();
         this.buffer = this.buffer.slice(lastSpace + 1);
-        return chunk;
+        return this.maybeAddFiller(chunk);
       }
     }
 
@@ -60,12 +66,13 @@ export class SpeechChunker {
     if (this.buffer.trim()) {
       const chunk = this.buffer.trim();
       this.buffer = "";
-      return chunk;
+      return this.maybeAddFiller(chunk);
     }
     return null;
   }
 
   reset() {
     this.buffer = "";
+    this.isFirstChunk = true;
   }
 }

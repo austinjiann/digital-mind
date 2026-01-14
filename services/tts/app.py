@@ -146,36 +146,22 @@ class TTSService:
 
         return {"voice_id": voice_id, "status": "created", "clips": len(paths)}
 
-    def _estimate_duration(self, text: str, chars_per_second: float = 11.0) -> float:
+    def _estimate_duration(self, text: str, chars_per_second: float = 7.0) -> float:
         """Estimate expected audio duration based on text length."""
-        # Conservative: ~11 chars/sec with generous buffer
+        # Very conservative: ~7 chars/sec (slower estimate = more room)
         base_duration = len(text) / chars_per_second
-        return base_duration * 1.8  # 80% buffer to avoid cutting off
+        return base_duration * 2.5  # 150% buffer to avoid cutting off
 
-    def _trim_audio(self, wav, text: str, sample_rate: int = 24000):
-        """Trim audio to expected duration + buffer."""
+    def _process_audio(self, wav, sample_rate: int = 24000):
+        """Process audio - just add silence padding, no trimming."""
         import numpy as np
 
         if hasattr(wav, 'cpu'):
             wav = wav.cpu().numpy()
         wav = np.array(wav)
 
-        # Calculate max allowed duration
-        expected_duration = self._estimate_duration(text)
-        max_samples = int(expected_duration * sample_rate)
-
-        # Hard truncate if too long
-        if len(wav) > max_samples:
-            print(f"  Trimming audio: {len(wav)/sample_rate:.2f}s -> {max_samples/sample_rate:.2f}s")
-            wav = wav[:max_samples]
-
-            # Fade out last 50ms to avoid click
-            fade_samples = int(0.05 * sample_rate)
-            fade = np.linspace(1.0, 0.0, fade_samples)
-            wav[-fade_samples:] = wav[-fade_samples:] * fade
-
-        # Add 100ms of silence padding at the end
-        silence_samples = int(0.1 * sample_rate)
+        # No trimming - just add 500ms silence padding
+        silence_samples = int(0.5 * sample_rate)
         silence = np.zeros(silence_samples, dtype=wav.dtype)
         wav = np.concatenate([wav, silence])
 
@@ -196,18 +182,18 @@ class TTSService:
             gpt_cond_latent=voice["gpt_cond_latent"],
             speaker_embedding=voice["speaker_embedding"],
             # Balance between natural sound and preventing hallucination
-            temperature=0.4,  # Higher = more natural intonation
+            temperature=0.5,  # Moderate expressiveness
             length_penalty=1.0,
             repetition_penalty=5.0,  # Still prevent repetition but less strict
             top_k=50,  # Allow more variation
             top_p=0.8,  # More natural sampling
-            speed=1.1,  # Slightly faster to reduce pauses
+            speed=1.0,  
             enable_text_splitting=False,  # Don't split text internally
         )
 
-        # Get wav and trim to expected duration (prevents gibberish)
+        # Get wav and add silence padding
         wav = out["wav"]
-        wav = self._trim_audio(wav, text)
+        wav = self._process_audio(wav)
 
         # Convert to WAV
         audio_tensor = torch.tensor(wav).unsqueeze(0)
