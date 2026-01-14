@@ -30,6 +30,9 @@ export class TTSClient {
       .replace(/[\u{1F300}-\u{1F9FF}]/gu, "") // Remove emojis
       .replace(/[\u{2600}-\u{26FF}]/gu, "") // Remove misc symbols
       .replace(/[\u{2700}-\u{27BF}]/gu, "") // Remove dingbats
+      .replace(/[—–]/g, ", ") // Replace em/en dash with comma
+      .replace(/[""'']/g, "'") // Normalize quotes
+      .replace(/[^\x00-\x7F]/g, "") // Remove any remaining non-ASCII
       .replace(/\s+/g, " ") // Normalize whitespace
       .trim();
   }

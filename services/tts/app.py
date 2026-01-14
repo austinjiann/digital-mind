@@ -76,11 +76,11 @@ class TTSService:
         for voice_id in os.listdir(voices_dir):
             voice_path = f"{voices_dir}/{voice_id}"
             if os.path.isdir(voice_path):
-                wav_files = sorted([
-                    f"{voice_path}/{f}"
-                    for f in os.listdir(voice_path)
-                    if f.endswith(".wav")
-                ])[:3]  # Use only 3 best clips
+                # Get all wav files
+                all_wavs = sorted([f for f in os.listdir(voice_path) if f.endswith(".wav")])
+
+                # Use first 5 clips (they're saved as clip_0.wav, clip_1.wav, etc.)
+                wav_files = [f"{voice_path}/{f}" for f in all_wavs[:5]]
 
                 if wav_files:
                     print(f"Pre-computing embeddings for voice: {voice_id}")
@@ -105,11 +105,9 @@ class TTSService:
         if not os.path.exists(voice_path):
             raise ValueError(f"Voice '{voice_id}' not found")
 
-        wav_files = sorted([
-            f"{voice_path}/{f}"
-            for f in os.listdir(voice_path)
-            if f.endswith(".wav")
-        ])[:3]
+        # Get all wav files
+        all_wavs = sorted([f for f in os.listdir(voice_path) if f.endswith(".wav")])
+        wav_files = [f"{voice_path}/{f}" for f in all_wavs[:5]]
 
         gpt_cond_latent, speaker_embedding = self.model.get_conditioning_latents(
             audio_path=wav_files
@@ -150,10 +148,9 @@ class TTSService:
 
     def _estimate_duration(self, text: str, chars_per_second: float = 14.0) -> float:
         """Estimate expected audio duration based on text length."""
-        # Average English speech: ~14-15 characters per second
-        # Add buffer for natural pauses
+        # Tighter estimate to cut gibberish earlier
         base_duration = len(text) / chars_per_second
-        return base_duration * 1.3  # 30% buffer
+        return base_duration * 1.2  # 20% buffer
 
     def _trim_audio(self, wav, text: str, sample_rate: int = 24000):
         """Trim audio to expected duration + buffer."""
@@ -193,13 +190,13 @@ class TTSService:
             language="en",
             gpt_cond_latent=voice["gpt_cond_latent"],
             speaker_embedding=voice["speaker_embedding"],
-            # Strict settings to prevent hallucination
-            temperature=0.1,  # Very low = very deterministic
-            length_penalty=1.0,  # Encourage shorter outputs
-            repetition_penalty=10.0,  # Strongly prevent repetition
-            top_k=20,  # Very limited vocabulary
-            top_p=0.5,  # Conservative nucleus sampling
-            speed=1.0,
+            # Balance between natural sound and preventing hallucination
+            temperature=0.4,  # Higher = more natural intonation
+            length_penalty=1.0,
+            repetition_penalty=5.0,  # Still prevent repetition but less strict
+            top_k=50,  # Allow more variation
+            top_p=0.8,  # More natural sampling
+            speed=1.15,  # Slightly faster speech
             enable_text_splitting=False,  # Don't split text internally
         )
 

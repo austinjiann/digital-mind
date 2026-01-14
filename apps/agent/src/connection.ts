@@ -104,8 +104,12 @@ async function handleUserText(
       })
     );
 
+    // Store audio results in order
+    const audioResults: (string | null)[] = [];
+    let nextChunkToSend = 0;
+
     // Helper to process speech chunk through TTS
-    const processSpeechChunk = async (text: string) => {
+    const processSpeechChunk = async (text: string, chunkIndex: number) => {
       if (data.abortController?.signal.aborted) return;
 
       try {
@@ -117,16 +121,28 @@ async function handleUserText(
           ttsFirstChunkMs = Date.now() - ttsStartTime;
         }
 
-        ws.send(
-          JSON.stringify({
-            type: "agent.audio_chunk",
-            audio,
-            chunk_index: audioChunkIndex++,
-            is_last: false,
-          })
-        );
+        // Store result at correct index
+        audioResults[chunkIndex] = audio;
+
+        // Send any chunks that are ready in order
+        while (audioResults[nextChunkToSend] !== undefined) {
+          const audioToSend = audioResults[nextChunkToSend];
+          if (audioToSend) {
+            ws.send(
+              JSON.stringify({
+                type: "agent.audio_chunk",
+                audio: audioToSend,
+                chunk_index: nextChunkToSend,
+                is_last: false,
+              })
+            );
+          }
+          nextChunkToSend++;
+        }
       } catch (error) {
         console.error("[TTS] Error:", error);
+        // Mark as failed so we don't block subsequent chunks
+        audioResults[chunkIndex] = null;
       }
     };
 
@@ -161,8 +177,9 @@ async function handleUserText(
       // Check for speakable chunk
       const speechChunk = chunker.addToken(token);
       if (speechChunk) {
-        // Start TTS in parallel, don't await
-        ttsQueue.push(processSpeechChunk(speechChunk));
+        // Start TTS in parallel with assigned index
+        const chunkIndex = audioChunkIndex++;
+        ttsQueue.push(processSpeechChunk(speechChunk, chunkIndex));
       }
     }
 
@@ -171,7 +188,8 @@ async function handleUserText(
     // Flush remaining text
     const finalChunk = chunker.flush();
     if (finalChunk) {
-      ttsQueue.push(processSpeechChunk(finalChunk));
+      const chunkIndex = audioChunkIndex++;
+      ttsQueue.push(processSpeechChunk(finalChunk, chunkIndex));
     }
 
     // Wait for all TTS to complete
