@@ -150,7 +150,7 @@ class TTSService:
         """Estimate expected audio duration based on text length."""
         # Conservative: ~11 chars/sec with generous buffer
         base_duration = len(text) / chars_per_second
-        return base_duration * 1.6  # 60% buffer to avoid cutting off
+        return base_duration * 1.8  # 80% buffer to avoid cutting off
 
     def _trim_audio(self, wav, text: str, sample_rate: int = 24000):
         """Trim audio to expected duration + buffer."""
@@ -174,6 +174,11 @@ class TTSService:
             fade = np.linspace(1.0, 0.0, fade_samples)
             wav[-fade_samples:] = wav[-fade_samples:] * fade
 
+        # Add 100ms of silence padding at the end
+        silence_samples = int(0.1 * sample_rate)
+        silence = np.zeros(silence_samples, dtype=wav.dtype)
+        wav = np.concatenate([wav, silence])
+
         return wav
 
     @modal.method()
@@ -196,7 +201,7 @@ class TTSService:
             repetition_penalty=5.0,  # Still prevent repetition but less strict
             top_k=50,  # Allow more variation
             top_p=0.8,  # More natural sampling
-            speed=1.0,  # Normal speed
+            speed=1.1,  # Slightly faster to reduce pauses
             enable_text_splitting=False,  # Don't split text internally
         )
 

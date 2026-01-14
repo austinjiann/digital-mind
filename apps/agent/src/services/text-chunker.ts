@@ -4,8 +4,16 @@
  */
 export class SpeechChunker {
   private buffer = "";
-  private minChunkLength = 60; // Longer chunks = fewer pauses
-  private maxChunkLength = 250; // Allow longer chunks for smoother speech
+  private minChunkLength = 100; // Longer chunks = fewer pauses
+  private maxChunkLength = 400; // Allow longer chunks for smoother speech
+
+  /**
+   * Add filler to sentence endings to fill the pause while next chunk loads.
+   */
+  private addFiller(chunk: string): string {
+    // Add "hmm" after sentences to fill the longer pause
+    return chunk + ", hmm";
+  }
 
   /**
    * Add tokens and get any complete chunks.
@@ -18,11 +26,11 @@ export class SpeechChunker {
     if (sentenceMatch && sentenceMatch[1].length >= this.minChunkLength) {
       const chunk = sentenceMatch[1].trim();
       this.buffer = sentenceMatch[2];
-      return chunk;
+      return this.addFiller(chunk);
     }
 
     // Check for clause boundary if buffer is getting long (comma, semicolon, etc)
-    if (this.buffer.length > 100) {
+    if (this.buffer.length > 200) {
       const clauseMatch = this.buffer.match(/^(.+?[,;:\-—])\s+(.*)$/s);
       if (clauseMatch && clauseMatch[1].length >= this.minChunkLength) {
         const chunk = clauseMatch[1].trim();

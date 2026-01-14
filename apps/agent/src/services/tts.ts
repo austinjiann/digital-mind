@@ -73,6 +73,8 @@ export class TTSClient {
     [/Supabase/gi, "soopa base"],
     [/Vercel/gi, "ver-sell"],
     [/Hono/gi, "hoh-no"],
+    // Hyphenated words
+    [/\bgo-to\b/gi, "go to"],
   ];
 
   /**
