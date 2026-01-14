@@ -4,8 +4,8 @@
  */
 export class SpeechChunker {
   private buffer = "";
-  private minChunkLength = 40; // Minimum chars before emitting
-  private maxChunkLength = 200; // Force emit if way too long
+  private minChunkLength = 20; // Minimum chars before emitting (lower = faster first audio)
+  private maxChunkLength = 150; // Force emit if too long (shorter = more responsive)
 
   /**
    * Add tokens and get any complete chunks.

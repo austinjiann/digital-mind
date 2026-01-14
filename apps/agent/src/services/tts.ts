@@ -20,12 +20,28 @@ export class TTSClient {
   }
 
   /**
+   * Clean text for TTS - remove problematic characters
+   */
+  private cleanText(text: string): string {
+    return text
+      .replace(/\.{2,}/g, ".") // Replace multiple dots with single
+      .replace(/…/g, ".") // Replace ellipsis character
+      .replace(/[*_~`#]/g, "") // Remove markdown characters
+      .replace(/[\u{1F300}-\u{1F9FF}]/gu, "") // Remove emojis
+      .replace(/[\u{2600}-\u{26FF}]/gu, "") // Remove misc symbols
+      .replace(/[\u{2700}-\u{27BF}]/gu, "") // Remove dingbats
+      .replace(/\s+/g, " ") // Normalize whitespace
+      .trim();
+  }
+
+  /**
    * Synthesize text to audio.
    * Returns base64-encoded WAV audio.
    */
   async synthesize(text: string): Promise<string> {
+    const cleanedText = this.cleanText(text);
     const startTime = Date.now();
-    console.log(`[TTS] Synthesizing: "${text.slice(0, 50)}..."`);
+    console.log(`[TTS] Synthesizing: "${cleanedText.slice(0, 50)}..."`);
 
     const response = await fetch(this.baseUrl, {
       method: "POST",
@@ -33,7 +49,7 @@ export class TTSClient {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        text,
+        text: cleanedText,
         voice_id: this.voiceId,
       }),
     });
