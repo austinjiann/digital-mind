@@ -1,22 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { AgentConnection } from "@/lib/websocket";
 import { StreamingAudioPlayer } from "@/lib/audio-player";
-
-interface Source {
-  chunk_id: string;
-  document_id: string;
-  filename: string;
-  excerpt: string;
-  score: number;
-}
+import { Header } from "@/components/header";
+import { MessageBubble } from "@/components/chat/message-bubble";
+import { SuggestedQuestions } from "@/components/chat/suggested-questions";
+import { ChatInput } from "@/components/chat/chat-input";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
 }
 
 interface Latency {
@@ -28,21 +25,26 @@ interface Latency {
   total_ms: number;
 }
 
+const WELCOME_SUGGESTIONS = [
+  "Building social confidence",
+  "Advancing my career",
+  "Making great first impressions",
+  "Mastering presentations or public speaking",
+];
+
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentResponse, setCurrentResponse] = useState("");
-  const [currentSources, setCurrentSources] = useState<Source[]>([]);
   const [latency, setLatency] = useState<Latency | null>(null);
+  const [readingMessageId, setReadingMessageId] = useState<string | null>(null);
 
   const connectionRef = useRef<AgentConnection | null>(null);
   const audioPlayerRef = useRef<StreamingAudioPlayer | null>(null);
   const currentMessageIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentResponseRef = useRef("");
-  const currentSourcesRef = useRef<Source[]>([]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -53,8 +55,7 @@ export default function Chat() {
     // Initialize audio player
     audioPlayerRef.current = new StreamingAudioPlayer();
 
-    const wsUrl =
-      process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002";
     const conn = new AgentConnection(wsUrl);
     connectionRef.current = conn;
 
@@ -63,16 +64,10 @@ export default function Chat() {
         case "agent.thinking":
           setIsProcessing(true);
           setCurrentResponse("");
-          setCurrentSources([]);
           currentResponseRef.current = "";
-          currentSourcesRef.current = [];
           currentMessageIdRef.current = crypto.randomUUID();
           break;
 
-        case "agent.sources":
-          setCurrentSources(event.sources);
-          currentSourcesRef.current = event.sources;
-          break;
 
         case "agent.token":
           setCurrentResponse(event.accumulated);
@@ -80,31 +75,25 @@ export default function Chat() {
           break;
 
         case "agent.audio_chunk":
-          if (event.is_last) {
-            // Audio stream finished
-            setIsSpeaking(false);
-          } else if (event.audio) {
-            // Start audio player if not already playing
+          // Only play audio if we're reading a specific message
+          if (readingMessageId && event.audio && !event.is_last) {
             if (!audioPlayerRef.current?.playing) {
               await audioPlayerRef.current?.start();
-              setIsSpeaking(true);
             }
             await audioPlayerRef.current?.addChunk(event.audio);
+          }
+          if (event.is_last) {
+            setReadingMessageId(null);
           }
           break;
 
         case "agent.done": {
-          // Capture values BEFORE any resets
           const finalContent = currentResponseRef.current;
-          const finalSources = [...currentSourcesRef.current];
           const messageId = currentMessageIdRef.current;
 
-          // Reset refs immediately
           currentResponseRef.current = "";
-          currentSourcesRef.current = [];
           currentMessageIdRef.current = null;
 
-          // Add message if we have content
           if (messageId && finalContent) {
             setMessages((prev) => [
               ...prev,
@@ -112,14 +101,11 @@ export default function Chat() {
                 id: messageId,
                 role: "assistant",
                 content: finalContent,
-                sources: finalSources,
               },
             ]);
           }
 
-          // Reset state
           setCurrentResponse("");
-          setCurrentSources([]);
           setIsProcessing(false);
           setLatency(event.latency);
           break;
@@ -128,179 +114,227 @@ export default function Chat() {
         case "agent.error":
           console.error("Agent error:", event.error);
           setIsProcessing(false);
-          setIsSpeaking(false);
           setCurrentResponse("");
           currentResponseRef.current = "";
           audioPlayerRef.current?.stop();
+          setReadingMessageId(null);
           break;
 
         case "agent.interrupted":
           setIsProcessing(false);
-          setIsSpeaking(false);
           setCurrentResponse("");
           currentResponseRef.current = "";
           audioPlayerRef.current?.stop();
+          setReadingMessageId(null);
           break;
       }
     });
 
     conn.connect();
     return () => conn.disconnect();
-  }, []);
+  }, [readingMessageId]);
 
-  const sendMessage = () => {
-    if (!input.trim() || isProcessing) return;
+  const sendMessage = (content?: string) => {
+    const messageContent = content || input.trim();
+    if (!messageContent || isProcessing) return;
 
-    // Add user message
     setMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role: "user", content: input },
+      { id: crypto.randomUUID(), role: "user", content: messageContent },
     ]);
 
-    // Send to agent
     connectionRef.current?.send({
       type: "user.text",
-      content: input,
+      content: messageContent,
     });
 
     setInput("");
   };
 
-  const handleInterrupt = () => {
+  const handleReadAloud = (messageId: string, content: string) => {
+    setReadingMessageId(messageId);
+    // Request TTS for this specific message
+    connectionRef.current?.send({
+      type: "user.request_tts",
+      content: content,
+    });
+  };
+
+  const handleStopReading = () => {
     audioPlayerRef.current?.stop();
-    setIsSpeaking(false);
+    setReadingMessageId(null);
     connectionRef.current?.send({ type: "user.interrupt" });
   };
 
+  const showWelcome = messages.length === 0 && !isProcessing;
+
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">Digital Mind</h1>
+    <div className="flex flex-col h-screen">
+      <Header userName="Austin" />
 
-      {/* Latency HUD */}
-      {latency && (
-        <div className="text-xs text-gray-500 mb-4 font-mono bg-gray-100 p-2 rounded">
-          <span className="mr-3">Retrieval: {latency.retrieval_ms}ms</span>
-          <span className="mr-3">LLM TTFT: {latency.llm_first_token_ms}ms</span>
-          <span className="mr-3">LLM: {latency.llm_total_ms}ms</span>
-          {latency.tts_first_chunk_ms !== undefined && (
-            <span className="mr-3">TTS TTFC: {latency.tts_first_chunk_ms}ms</span>
+      {/* Scrollable messages area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto w-full px-4 py-4 space-y-6">
+          {/* Latency HUD */}
+        <AnimatePresence>
+          {latency && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-xs text-gray-500 py-2 font-mono bg-dm-surface/80 backdrop-blur-sm border border-dm-border rounded-lg mt-4 px-3"
+            >
+              <span className="mr-3">Retrieval: {latency.retrieval_ms}ms</span>
+              <span className="mr-3">LLM TTFT: {latency.llm_first_token_ms}ms</span>
+              <span className="mr-3">LLM: {latency.llm_total_ms}ms</span>
+              {latency.tts_first_chunk_ms !== undefined && (
+                <span className="mr-3">TTS TTFC: {latency.tts_first_chunk_ms}ms</span>
+              )}
+              {latency.tts_total_ms !== undefined && (
+                <span className="mr-3">TTS: {latency.tts_total_ms}ms</span>
+              )}
+              <span className="font-bold text-dm-accent">
+                Total: {latency.total_ms}ms
+              </span>
+            </motion.div>
           )}
-          {latency.tts_total_ms !== undefined && (
-            <span className="mr-3">TTS: {latency.tts_total_ms}ms</span>
-          )}
-          <span className="font-bold">Total: {latency.total_ms}ms</span>
-        </div>
-      )}
+        </AnimatePresence>
 
-      {/* Speaking indicator */}
-      {isSpeaking && (
-        <div className="flex items-center gap-3 mb-4 p-2 bg-green-50 rounded-lg">
-          <div className="flex gap-1">
-            <span className="w-2 h-4 bg-green-500 rounded animate-[bounce_0.5s_ease-in-out_infinite]" />
-            <span className="w-2 h-4 bg-green-500 rounded animate-[bounce_0.5s_ease-in-out_infinite_0.1s]" style={{ animationDelay: "0.1s" }} />
-            <span className="w-2 h-4 bg-green-500 rounded animate-[bounce_0.5s_ease-in-out_infinite_0.2s]" style={{ animationDelay: "0.2s" }} />
-          </div>
-          <span className="text-sm text-green-700">Speaking...</span>
-          <button
-            onClick={handleInterrupt}
-            className="ml-auto text-sm px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
-          >
-            Stop
-          </button>
-        </div>
-      )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`p-4 rounded-lg ${
-              msg.role === "user" ? "bg-blue-100 ml-12" : "bg-gray-100 mr-12"
-            }`}
-          >
-            <div className="whitespace-pre-wrap">{msg.content}</div>
-            {msg.sources && msg.sources.length > 0 && (
-              <details className="mt-3 text-sm">
-                <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
-                  {msg.sources.length} source{msg.sources.length > 1 ? "s" : ""}
-                </summary>
-                <ul className="mt-2 space-y-2">
-                  {msg.sources.map((s) => (
-                    <li
-                      key={s.chunk_id}
-                      className="bg-white p-2 rounded border text-gray-700"
+        {/* Messages */}
+        <div className="space-y-6">
+          {/* Welcome message */}
+          <AnimatePresence>
+            {showWelcome && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                className="p-6 rounded-xl border border-dm-border bg-dm-surface/80 backdrop-blur-sm"
+              >
+                <motion.p
+                  className="text-gray-200 mb-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  Hi! I&apos;m Austin, your RAG-powered voice agent. I can help you
+                  with real-time information and insights.
+                </motion.p>
+                <motion.p
+                  className="text-gray-200 mb-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  In the next 2 mins, I&apos;ll teach you a powerful cue to instantly
+                  make you more charismatic.
+                </motion.p>
+                <motion.p
+                  className="text-gray-300 mb-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  What can I assist you with today?
+                </motion.p>
+                <div className="space-y-2">
+                  {WELCOME_SUGGESTIONS.map((suggestion, index) => (
+                    <motion.button
+                      key={suggestion}
+                      onClick={() => sendMessage(suggestion)}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
+                      whileHover={{ x: 4 }}
+                      className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
                     >
-                      <div className="font-medium text-gray-900">
-                        {s.filename}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Score: {(s.score * 100).toFixed(1)}%
-                      </div>
-                      <div className="mt-1 text-gray-600">{s.excerpt}</div>
-                    </li>
+                      <ArrowRightIcon className="w-4 h-4 text-dm-accent" />
+                      <span>{suggestion}</span>
+                    </motion.button>
                   ))}
-                </ul>
-              </details>
+                </div>
+              </motion.div>
             )}
-          </div>
-        ))}
+          </AnimatePresence>
 
-        {/* Streaming response */}
-        {currentResponse && (
-          <div className="p-4 rounded-lg bg-gray-100 mr-12">
-            <div className="whitespace-pre-wrap">
-              {currentResponse}
-              <span className="animate-pulse">▊</span>
-            </div>
-          </div>
-        )}
+          {/* Chat messages */}
+          {messages.map((msg) => (
+            <MessageBubble
+              key={msg.id}
+              role={msg.role}
+              content={msg.content}
+              onReadAloud={
+                msg.role === "assistant"
+                  ? () => handleReadAloud(msg.id, msg.content)
+                  : undefined
+              }
+              onStopReading={handleStopReading}
+              isReading={readingMessageId === msg.id}
+            />
+          ))}
 
-        {/* Processing indicator */}
-        {isProcessing && !currentResponse && (
-          <div className="p-4 rounded-lg bg-gray-100 mr-12">
-            <div className="flex items-center gap-2 text-gray-500">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-              <div
-                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
-              />
-              <div
-                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
-              />
-              <span className="ml-2">Thinking...</span>
-            </div>
-          </div>
-        )}
 
-        {messages.length === 0 && !isProcessing && (
-          <div className="text-center text-gray-500 py-8">
-            Start a conversation with your Digital Mind
-          </div>
-        )}
+          {/* Streaming response */}
+          {currentResponse && (
+            <MessageBubble
+              role="assistant"
+              content={currentResponse}
+              isStreaming
+            />
+          )}
 
-        <div ref={messagesEndRef} />
+          {/* Processing indicator */}
+          <AnimatePresence>
+            {isProcessing && !currentResponse && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-4 rounded-xl bg-dm-surface/80 backdrop-blur-sm border border-dm-border"
+              >
+                <div className="flex items-center gap-2 text-gray-500">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 bg-dm-accent rounded-full"
+                      animate={{ y: [0, -8, 0] }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 0.6,
+                        delay: i * 0.1,
+                      }}
+                    />
+                  ))}
+                  <span className="ml-2 text-gray-400">Thinking...</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div ref={messagesEndRef} />
+        </div>
+        </div>
       </div>
 
-      {/* Input */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Ask me anything..."
-          className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isProcessing}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={isProcessing || !input.trim()}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Send
-        </button>
+      {/* Fixed bottom area */}
+      <div className="flex-shrink-0 border-t border-dm-border/50 bg-dm-bg">
+        <div className="max-w-4xl mx-auto w-full px-4 py-4 space-y-4">
+          {/* Suggested questions */}
+          <SuggestedQuestions
+            onSelect={(question) => sendMessage(question)}
+            disabled={isProcessing}
+          />
+
+          {/* Chat input */}
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSubmit={() => sendMessage()}
+            disabled={isProcessing}
+          />
+        </div>
       </div>
     </div>
   );
