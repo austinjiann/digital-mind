@@ -43,7 +43,10 @@ export function Header({ userName = "Austin" }: HeaderProps) {
           height={24}
         />
         <span className="font-semibold text-gray-100">{userName}</span>
-        <span className="text-green-500 text-lg">●</span>
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75"></span>
+          <span className="relative rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
       </div>
 
       {/* Right: Call button */}

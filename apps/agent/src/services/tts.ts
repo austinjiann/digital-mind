@@ -31,7 +31,7 @@ export class TTSClient {
     [/Express\.?js/gi, "Express"],
     [/Three\.?js/gi, "Three JS"],
     // Acronyms - use word boundaries
-    [/\bAPIs?\b/g, "A P I"],
+    [/\bAPIs?\b/gi, "A P I"],
     [/\bUI\b/g, "U I"],
     [/\bUX\b/g, "U X"],
     [/\bCSS\b/g, "C S S"],

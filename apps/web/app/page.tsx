@@ -48,6 +48,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentResponseRef = useRef("");
   const readingMessageIdRef = useRef<string | null>(null);
+  const isPlayingReadAloudRef = useRef(false); // Track if we started playing read-aloud
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -80,12 +81,15 @@ export default function Chat() {
         case "agent.audio_chunk":
           // Only play audio if we're reading a specific message
           if (readingMessageIdRef.current && event.audio && !event.is_last) {
+            isPlayingReadAloudRef.current = true; // Mark that we started playing
             if (!audioPlayerRef.current?.playing) {
               await audioPlayerRef.current?.start();
             }
             await audioPlayerRef.current?.addChunk(event.audio, event.chunk_index);
           }
-          if (event.is_last) {
+          // Only clear reading state if we were actually playing read-aloud audio
+          if (event.is_last && isPlayingReadAloudRef.current) {
+            isPlayingReadAloudRef.current = false;
             readingMessageIdRef.current = null;
             setReadingMessageId(null);
           }
@@ -128,6 +132,7 @@ export default function Chat() {
           setCurrentResponse("");
           currentResponseRef.current = "";
           audioPlayerRef.current?.stop();
+          isPlayingReadAloudRef.current = false;
           readingMessageIdRef.current = null;
           setReadingMessageId(null);
           break;
@@ -137,6 +142,7 @@ export default function Chat() {
           setCurrentResponse("");
           currentResponseRef.current = "";
           audioPlayerRef.current?.stop();
+          isPlayingReadAloudRef.current = false;
           readingMessageIdRef.current = null;
           setReadingMessageId(null);
           break;
@@ -184,6 +190,7 @@ export default function Chat() {
 
   const handleStopReading = () => {
     audioPlayerRef.current?.stop();
+    isPlayingReadAloudRef.current = false;
     readingMessageIdRef.current = null;
     setReadingMessageId(null);
     connectionRef.current?.send({ type: "user.interrupt" });

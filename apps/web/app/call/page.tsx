@@ -397,6 +397,40 @@ export default function CallPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Suggested talking points - only show before call starts */}
+        <AnimatePresence>
+          {!callStarted && !isThinking && !isSpeaking && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-wrap justify-center gap-2 max-w-md mt-4"
+            >
+              {[
+                "What are you working on?",
+                "Tell me about yourself",
+                "What's your tech stack?",
+                "Any fun projects?",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => {
+                    if (!callStarted) setCallStarted(true);
+                    connectionRef.current?.send({
+                      type: "user.text",
+                      content: suggestion,
+                    });
+                  }}
+                  className="px-3 py-1.5 text-sm text-gray-400 bg-dm-surface/50 border border-dm-border/50 rounded-full hover:bg-dm-surface hover:text-gray-300 hover:border-dm-border transition-colors"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Bottom controls */}
