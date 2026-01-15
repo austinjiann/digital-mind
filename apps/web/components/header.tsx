@@ -49,8 +49,14 @@ export function Header({ userName = "Austin" }: HeaderProps) {
         </span>
       </div>
 
-      {/* Right: Call button */}
+      {/* Right: Case Study link and Call button */}
       <div className="flex items-center justify-end gap-4">
+        <Link
+          href="/case-study"
+          className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+        >
+          Case Study
+        </Link>
         <Link
           href="/call"
           className="w-8 h-8 rounded-full bg-dm-surface-hover flex items-center justify-center hover:bg-dm-accent/20 transition-colors"

@@ -1,0 +1,110 @@
+# Building a digital clone of myself in 3 days
+
+![Austin Jian](/casestudy/intro%20img.png)
+
+On Monday morning, I started the takehome assignment for Delphi, where I was tasked to create
+a digital mind of myself. I just came back from a hackathon the day before, and I had a linear algebra test on Monday
+and a calculus test on Wednesday. 
+
+I wanted to finish the project in 3 days so that I wouldn't drag on this 
+takehome assignment for too long, so I had to wisely spend my time and energy to pass my math tests that I did not study for
+while producing high quality work for this takehome assesment.
+
+## Table of Contents
+
+[Planning the Project](#planning-the-project)
+
+[Day 1 - Gathering Personal Data and Getting RAG Functioning](#day-1-gathering-personal-data-and-getting-rag-functioning)
+
+[Day 2 - Sampling Voice Data and Implementing TTS](#day-2-sampling-voice-data-and-implementing-tts)
+
+[Day 3 - Polishing UX/UI & Deploying](#day-3-polishing-ux-ui-deploying)
+
+[Lessons & Learnings](#lessons-learnings)
+
+## Planning the Project
+
+So this took place in Day 1 because I needed a clear plan before executing. Before creating the GitHub repo or writing 
+any lines of code, I took around 30 minutes to an hour talking to ChatGPT to plan out everything. This was all created in
+a google doc so that I could stay organized. 
+
+Were all 69 pages and 7985 words pure quality? Hell no. A lot of it was blocks of code or data about myself, but this gave me a clarity
+of how to execute. It also let me split tasks clearly into 3 days so that I could fit this into my schedule without failing my math tests.
+
+![Austin Jian](/casestudy/plan.png)
+
+So what did we conclude from this plan? 
+
+For the frontend, I used:
+
+- Next.js 14, a classic for built-in routing and a bunch of other things
+- TypeScript for type checking
+- Tailwind CSS combined with Radix UI for styling, icons, e.t.c
+- Motion for animations to enhance UX and it looks hella cool when used right
+
+For the backend, I used:
+
+- Bun runtime, because it's really fast and has WebSocket support built-in
+- WebSocket server for real-time streaming. No HTTP, optimizing speed to reduce wait times
+- Supabase with PostgreSQL and pgvector for the database and vector similarity search
+- OpenAI GPT-4o for the LLM and text-embedding to convert text to vectors
+- Modal for hosting XTTS v2 on serverless GPUs - voice cloning without managing infrastructure
+
+![Austin Jian](/casestudy/techstack.png)
+
+## Day 1 - Gathering Personal Data and Getting RAG Functioning
+
+Day 1 started off with collecting personal data. I first turned my personal website into a text file. This was pretty easy
+because I wrote case studies about my favourite projects. I then used ChatGPT to ask me a LOT of questions about myself. My 
+background, hobbies, values, interests, e.t.c. It honestly took a while answering all of them.
+
+After collecting the data, I had to set up Supabase and process the documents. I wrote an ingestion script that chunked all 
+my markdown files into ~512 token pieces, generated embeddings using OpenAI's text-embedding-3-small model, and stored everything in Supabase with pgvector for vector similarity search.
+
+![Austin Jian](/casestudy/kb.png)
+
+Once the knowledge base was ready, I implemented the RAG pipeline. I used my friend's OpenAI API key 
+(he had $3000 in credits and gave it to me for free lol). The GPT-4o model worked really well. 
+
+By the end of day 1, I had a working text-based chat interface that could answer questions about me using my 
+knowledge base. We also set up the WebSocket connection, so responses streamed in real-time. The full pipeline was almost done: 
+embed queries, search chunks via vector similarity, inject context into the LLM prompt, and stream responses back. We just needed to stream audio.
+
+## Day 2 - Sampling Voice Data and Implementing TTS
+
+Day 2 started with voice recordings. I sat in a room and read passages aloud, trying to vary my tone and pacing 
+to capture different speaking styles. This part of the project matters a LOT. The quality of voice samples directly affects 
+how natural the clone sounds. Looking back, I could have done better by adding more emotion and using a higher quality mic setup. 
+Some static and background noise crept into the recordings, which showed up in the voice clone later.
+
+For the text-to-speech service, I built a Python API using XTTS v2 for voice cloning. 
+The model takes my voice samples as a reference and generates speech that mimics my voice patterns. 
+I hosted this on Modal's serverless GPUs - this let me run the model on demand without managing infrastructure, 
+and the GPU acceleration keeps response times fast for real-time streaming.
+
+![Austin Jian](/casestudy/modal.png)
+
+## Day 3 - Polishing UX/UI & Deploying
+
+So by now, a lot of the technical work had already been done. Now it was just making it look nice. I took inspiration
+from Delphi's website and how their interface looks when talking to the digital clones. 
+
+I added smart suggestions,
+guiding the user to ask some questions if they are unsure where to start. I also added a WISPR Flow mic-pill incase
+users wanted to use voice dictation because why not. 
+
+![Austin Jian](/casestudy/ui.png)
+
+I added framer motion animations throughout the site so that everything would be smooth.
+
+I then deployed the frontend on vercel and the backend on RailWay.
+
+## Lessons & Learnings
+
+Before this project, I had never worked with vector databases or RAG. My previous AI projects used LLM wrappers, feeding context directly into prompts. 
+That approach doesn't scale for really large knowledge bases, plus it's a lot slower.
+
+This project pushed me to learn embeddings, vector similarity search with pgvector, chunking strategies, and how RAG pipelines connect everything together. 
+I went from zero experience to a working implementation after the project.
+
+All in all, this project was a great learning experience :)
