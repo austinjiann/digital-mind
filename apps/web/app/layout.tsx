@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Digital Mind",
+  title: "Austin's Digital Mind",
   description: "Your personal AI assistant",
+  icons: {
+    icon: "/delphi.png",
+  },
 };
 
 export default function RootLayout({

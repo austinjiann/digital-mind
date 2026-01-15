@@ -1,5 +1,5 @@
 /**
- * Handles gapless playback of streaming audio chunks.
+ * Handles gapless playback of streaming audio chunks with ordering support.
  */
 export class StreamingAudioPlayer {
   private audioContext: AudioContext | null = null;
@@ -7,6 +7,11 @@ export class StreamingAudioPlayer {
   private sources: AudioBufferSourceNode[] = [];
   private isPlaying = false;
   private onEndCallback?: () => void;
+
+  // Chunk ordering
+  private chunkBuffer: Map<number, string> = new Map();
+  private nextExpectedChunk = 0;
+  private isProcessing = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -23,10 +28,49 @@ export class StreamingAudioPlayer {
     }
     this.scheduledEndTime = this.audioContext.currentTime;
     this.isPlaying = true;
+
+    // Reset chunk ordering state
+    this.chunkBuffer.clear();
+    this.nextExpectedChunk = 0;
   }
 
-  async addChunk(base64Audio: string) {
+  async addChunk(base64Audio: string, chunkIndex?: number) {
     if (!this.audioContext || !this.isPlaying || !base64Audio) return;
+
+    // If no chunk index provided, play immediately (backwards compatibility)
+    if (chunkIndex === undefined) {
+      await this.scheduleAudio(base64Audio);
+      return;
+    }
+
+    // Buffer the chunk at its index
+    this.chunkBuffer.set(chunkIndex, base64Audio);
+
+    // Process buffered chunks in order
+    await this.processBufferedChunks();
+  }
+
+  private async processBufferedChunks() {
+    // Prevent concurrent processing
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+
+    try {
+      // Process chunks sequentially in order
+      while (this.chunkBuffer.has(this.nextExpectedChunk)) {
+        const audio = this.chunkBuffer.get(this.nextExpectedChunk)!;
+        this.chunkBuffer.delete(this.nextExpectedChunk);
+
+        await this.scheduleAudio(audio);
+        this.nextExpectedChunk++;
+      }
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  private async scheduleAudio(base64Audio: string) {
+    if (!this.audioContext || !this.isPlaying) return;
 
     try {
       // Decode base64 to ArrayBuffer
@@ -62,8 +106,11 @@ export class StreamingAudioPlayer {
         if (idx !== -1) this.sources.splice(idx, 1);
 
         // Check if all audio has finished
-        if (this.sources.length === 0 && this.onEndCallback) {
-          this.onEndCallback();
+        if (this.sources.length === 0) {
+          this.isPlaying = false;
+          if (this.onEndCallback) {
+            this.onEndCallback();
+          }
         }
       };
     } catch (error) {
@@ -84,6 +131,10 @@ export class StreamingAudioPlayer {
     }
     this.sources = [];
     this.scheduledEndTime = 0;
+
+    // Clear chunk buffer
+    this.chunkBuffer.clear();
+    this.nextExpectedChunk = 0;
   }
 
   onEnd(callback: () => void) {

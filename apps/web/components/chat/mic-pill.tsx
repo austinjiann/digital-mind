@@ -245,7 +245,7 @@ export function MicPill({ onTranscript, onInterimTranscript, disabled }: MicPill
             transition={{ duration: 0.15 }}
             className="px-3 py-2 rounded-full bg-dm-surface border border-dm-border text-xs text-gray-300 whitespace-nowrap shadow-lg"
           >
-            Hold <span className="text-pink-400 font-medium">Control</span> to dictate
+            Hold <span className="text-orange-400 font-medium">Control</span> to dictate
           </motion.div>
         )}
       </AnimatePresence>
@@ -264,7 +264,7 @@ export function MicPill({ onTranscript, onInterimTranscript, disabled }: MicPill
         disabled={disabled}
         className={`relative rounded-full shadow-lg backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed ${
           isRecording
-            ? "bg-white/15 border border-pink-400/40"
+            ? "bg-white/15 border border-orange-400/40"
             : "bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
         }`}
         animate={{
@@ -289,7 +289,7 @@ export function MicPill({ onTranscript, onInterimTranscript, disabled }: MicPill
                 key={i}
                 className={`rounded-full ${
                   isRecording
-                    ? "bg-pink-400"
+                    ? "bg-orange-400"
                     : isHovered
                       ? "bg-white/70"
                       : "bg-white/50"
@@ -307,7 +307,7 @@ export function MicPill({ onTranscript, onInterimTranscript, disabled }: MicPill
         {/* Glow effect when recording */}
         {isRecording && (
           <motion.div
-            className="absolute inset-0 rounded-full bg-pink-500/30 blur-xl -z-10"
+            className="absolute inset-0 rounded-full bg-orange-500/30 blur-xl -z-10"
             animate={{ opacity: [0.4, 0.7, 0.4] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
           />

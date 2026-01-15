@@ -47,6 +47,7 @@ export default function Chat() {
   const currentMessageIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentResponseRef = useRef("");
+  const readingMessageIdRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -78,19 +79,22 @@ export default function Chat() {
 
         case "agent.audio_chunk":
           // Only play audio if we're reading a specific message
-          if (readingMessageId && event.audio && !event.is_last) {
+          if (readingMessageIdRef.current && event.audio && !event.is_last) {
             if (!audioPlayerRef.current?.playing) {
               await audioPlayerRef.current?.start();
             }
-            await audioPlayerRef.current?.addChunk(event.audio);
+            await audioPlayerRef.current?.addChunk(event.audio, event.chunk_index);
           }
           if (event.is_last) {
+            readingMessageIdRef.current = null;
             setReadingMessageId(null);
           }
           break;
 
-        case "agent.done": {
-          const finalContent = currentResponseRef.current;
+        case "agent.text_complete": {
+          // Text streaming is done - finalize message immediately
+          // (don't wait for TTS to complete)
+          const finalContent = event.content || currentResponseRef.current;
           const messageId = currentMessageIdRef.current;
 
           currentResponseRef.current = "";
@@ -109,6 +113,11 @@ export default function Chat() {
 
           setCurrentResponse("");
           setIsProcessing(false);
+          break;
+        }
+
+        case "agent.done": {
+          // Final event with latency metrics (after TTS completes)
           setLatency(event.latency);
           break;
         }
@@ -119,6 +128,7 @@ export default function Chat() {
           setCurrentResponse("");
           currentResponseRef.current = "";
           audioPlayerRef.current?.stop();
+          readingMessageIdRef.current = null;
           setReadingMessageId(null);
           break;
 
@@ -127,6 +137,7 @@ export default function Chat() {
           setCurrentResponse("");
           currentResponseRef.current = "";
           audioPlayerRef.current?.stop();
+          readingMessageIdRef.current = null;
           setReadingMessageId(null);
           break;
       }
@@ -134,11 +145,19 @@ export default function Chat() {
 
     conn.connect();
     return () => conn.disconnect();
-  }, [readingMessageId]);
+  }, []);
 
   const sendMessage = (content?: string) => {
     const messageContent = content || input.trim();
-    if (!messageContent || isProcessing) return;
+    if (!messageContent) return;
+
+    // Interrupt any ongoing response
+    if (isProcessing) {
+      connectionRef.current?.send({ type: "user.interrupt" });
+      setIsProcessing(false);
+      setCurrentResponse("");
+      currentResponseRef.current = "";
+    }
 
     setMessages((prev) => [
       ...prev,
@@ -154,6 +173,7 @@ export default function Chat() {
   };
 
   const handleReadAloud = (messageId: string, content: string) => {
+    readingMessageIdRef.current = messageId;
     setReadingMessageId(messageId);
     // Request TTS for this specific message
     connectionRef.current?.send({
@@ -164,6 +184,7 @@ export default function Chat() {
 
   const handleStopReading = () => {
     audioPlayerRef.current?.stop();
+    readingMessageIdRef.current = null;
     setReadingMessageId(null);
     connectionRef.current?.send({ type: "user.interrupt" });
   };
@@ -309,7 +330,6 @@ export default function Chat() {
           {/* Suggested questions */}
           <SuggestedQuestions
             onSelect={(question) => sendMessage(question)}
-            disabled={isProcessing}
           />
 
           {/* Chat input */}
@@ -317,7 +337,6 @@ export default function Chat() {
             value={input}
             onChange={setInput}
             onSubmit={() => sendMessage()}
-            disabled={isProcessing}
             interimTranscript={interimTranscript}
           />
         </div>
@@ -330,7 +349,6 @@ export default function Chat() {
           setInterimTranscript("");
         }}
         onInterimTranscript={setInterimTranscript}
-        disabled={isProcessing}
       />
     </div>
   );

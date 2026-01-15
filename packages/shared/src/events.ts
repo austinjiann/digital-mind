@@ -25,12 +25,18 @@ export const UserSetModeEvent = z.object({
   mode: z.enum(["voice", "text", "both"]),
 });
 
+export const UserRequestTTSEvent = z.object({
+  type: z.literal("user.request_tts"),
+  content: z.string().min(1),
+});
+
 export const ClientEvent = z.discriminatedUnion("type", [
   UserTextEvent,
   UserInterruptEvent,
   UserAudioChunkEvent,
   UserAudioEndEvent,
   UserSetModeEvent,
+  UserRequestTTSEvent,
 ]);
 
 export type ClientEvent = z.infer<typeof ClientEvent>;
@@ -72,6 +78,11 @@ export const AgentAudioChunkEvent = z.object({
   is_last: z.boolean(),
 });
 
+export const AgentTextCompleteEvent = z.object({
+  type: z.literal("agent.text_complete"),
+  content: z.string(),
+});
+
 export const AgentDoneEvent = z.object({
   type: z.literal("agent.done"),
   latency: z.object({
@@ -101,6 +112,7 @@ export type ServerEvent =
   | z.infer<typeof AgentTokenEvent>
   | z.infer<typeof AgentSourcesEvent>
   | z.infer<typeof AgentAudioChunkEvent>
+  | z.infer<typeof AgentTextCompleteEvent>
   | z.infer<typeof AgentDoneEvent>
   | z.infer<typeof AgentErrorEvent>
   | z.infer<typeof AgentInterruptedEvent>;

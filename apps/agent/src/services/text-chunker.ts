@@ -7,6 +7,15 @@ export class SpeechChunker {
   private minChunkLength = 100; // Longer chunks = fewer pauses
   private maxChunkLength = 400; // Allow longer chunks for smoother speech
   private isFirstChunk = true;
+  private useFiller: boolean;
+
+  /**
+   * @param useFiller - Whether to add "Um," fillers between chunks (default true).
+   *                    Set to false for read-aloud of prepared text.
+   */
+  constructor(useFiller = true) {
+    this.useFiller = useFiller;
+  }
 
   /**
    * Add filler at the beginning of non-first chunks to fill the pause
@@ -18,7 +27,11 @@ export class SpeechChunker {
       return chunk;
     }
     // Add "Um," at the start to fill the gap after previous chunk
-    return "Um, " + chunk;
+    // Only for streaming responses, not read-aloud
+    if (this.useFiller) {
+      return "Um, " + chunk;
+    }
+    return chunk;
   }
 
   /**

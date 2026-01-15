@@ -30,6 +30,10 @@ export async function handleConnection(
         handleInterrupt(ws, data);
         break;
 
+      case "user.request_tts":
+        await handleRequestTTS(ws, data, event.content);
+        break;
+
       // Audio events handled in Day 2
       case "user.audio_chunk":
       case "user.audio_end":
@@ -192,6 +196,14 @@ async function handleUserText(
       ttsQueue.push(processSpeechChunk(finalChunk, chunkIndex));
     }
 
+    // Signal text is complete (so UI can stop showing streaming indicator)
+    ws.send(
+      JSON.stringify({
+        type: "agent.text_complete",
+        content: accumulated,
+      })
+    );
+
     // Wait for all TTS to complete
     await Promise.all(ttsQueue);
 
@@ -238,6 +250,106 @@ function handleInterrupt(
   }
   data.state = "IDLE";
   ws.send(JSON.stringify({ type: "agent.interrupted" }));
+}
+
+async function handleRequestTTS(
+  ws: { send: (data: string) => void; data: ConnectionData },
+  data: ConnectionData,
+  content: string
+) {
+  // Cancel any ongoing response
+  if (data.abortController) {
+    data.abortController.abort();
+  }
+
+  data.state = "SPEAKING";
+  data.abortController = new AbortController();
+  const ttsClient = getTTSClient();
+  // Use chunker without "Um," fillers for read-aloud of prepared text
+  const chunker = new SpeechChunker(false);
+
+  let audioChunkIndex = 0;
+  const audioResults: (string | null)[] = [];
+  let nextChunkToSend = 0;
+
+  const processSpeechChunk = async (text: string, chunkIndex: number) => {
+    if (data.abortController?.signal.aborted) return;
+
+    try {
+      const audio = await ttsClient.synthesize(text);
+      if (data.abortController?.signal.aborted) return;
+
+      audioResults[chunkIndex] = audio;
+
+      while (audioResults[nextChunkToSend] !== undefined) {
+        const audioToSend = audioResults[nextChunkToSend];
+        if (audioToSend) {
+          ws.send(
+            JSON.stringify({
+              type: "agent.audio_chunk",
+              audio: audioToSend,
+              chunk_index: nextChunkToSend,
+              is_last: false,
+            })
+          );
+        }
+        nextChunkToSend++;
+      }
+    } catch (error) {
+      console.error("[TTS] Error:", error);
+      audioResults[chunkIndex] = null;
+    }
+  };
+
+  try {
+    // Split content into speakable chunks
+    const ttsQueue: Promise<void>[] = [];
+    const chunks: string[] = [];
+
+    // First, collect all chunks
+    for (const char of content) {
+      const speechChunk = chunker.addToken(char);
+      if (speechChunk) {
+        chunks.push(speechChunk);
+      }
+    }
+
+    const finalChunk = chunker.flush();
+    if (finalChunk) {
+      chunks.push(finalChunk);
+    }
+
+    // Process chunks with pauses for natural spacing (like streaming)
+    for (let i = 0; i < chunks.length; i++) {
+      let chunk = chunks[i];
+      // Add pause marker for non-final chunks to create natural breaks
+      // Using ". . ." with spaces prevents the cleanText collapse and creates a pause
+      if (i < chunks.length - 1) {
+        chunk = chunk.trimEnd() + " . . .";
+      }
+      const chunkIndex = audioChunkIndex++;
+      ttsQueue.push(processSpeechChunk(chunk, chunkIndex));
+    }
+
+    await Promise.all(ttsQueue);
+
+    // Send final audio marker
+    ws.send(
+      JSON.stringify({
+        type: "agent.audio_chunk",
+        audio: "",
+        chunk_index: audioChunkIndex,
+        is_last: true,
+      })
+    );
+
+    data.state = "IDLE";
+  } catch (error) {
+    if ((error as Error).name === "AbortError") {
+      return;
+    }
+    throw error;
+  }
 }
 
 function buildSystemPrompt(sources: RetrievedChunk[]): string {
