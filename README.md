@@ -3,6 +3,10 @@
 A digital clone that answers questions about me using RAG and voice cloning.
 
 
+https://github.com/user-attachments/assets/1984133f-5cbd-4992-8a96-c50207c7678c
+
+
+
 ## Tech Stack
 
 **Frontend:** Next.js 14, TypeScript, Tailwind CSS, Framer Motion
