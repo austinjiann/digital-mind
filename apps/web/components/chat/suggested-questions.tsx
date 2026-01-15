@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronUpIcon, ChevronDownIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 
 const SUGGESTIONS = [
-  "Building social confidence",
-  "Advancing my career",
-  "Making great first impressions",
-  "Mastering presentations or public speaking",
+  "What are PlayCreate and FlowBoard?",
+  "What languages and frameworks do you use?",
+  "What's your background?",
+  "What are you working on right now?",
 ];
 
 interface SuggestedQuestionsProps {

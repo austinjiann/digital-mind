@@ -9,6 +9,7 @@ import { Header } from "@/components/header";
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { SuggestedQuestions } from "@/components/chat/suggested-questions";
 import { ChatInput } from "@/components/chat/chat-input";
+import { MicPill } from "@/components/chat/mic-pill";
 
 interface Message {
   id: string;
@@ -26,15 +27,16 @@ interface Latency {
 }
 
 const WELCOME_SUGGESTIONS = [
-  "Building social confidence",
-  "Advancing my career",
-  "Making great first impressions",
-  "Mastering presentations or public speaking",
+  "Tell me about your projects",
+  "What's your tech stack?",
+  "What are your career goals?",
+  "What do you do for fun?",
 ];
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentResponse, setCurrentResponse] = useState("");
   const [latency, setLatency] = useState<Latency | null>(null);
@@ -219,25 +221,8 @@ export default function Chat() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.1 }}
                 >
-                  Hi! I&apos;m Austin, your RAG-powered voice agent. I can help you
-                  with real-time information and insights.
-                </motion.p>
-                <motion.p
-                  className="text-gray-200 mb-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  In the next 2 mins, I&apos;ll teach you a powerful cue to instantly
-                  make you more charismatic.
-                </motion.p>
-                <motion.p
-                  className="text-gray-300 mb-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  What can I assist you with today?
+                  Hey! I&apos;m Austin. Ask me anything about my projects, tech stack,
+                  career goals, or whatever you&apos;re curious about.
                 </motion.p>
                 <div className="space-y-2">
                   {WELCOME_SUGGESTIONS.map((suggestion, index) => (
@@ -333,9 +318,20 @@ export default function Chat() {
             onChange={setInput}
             onSubmit={() => sendMessage()}
             disabled={isProcessing}
+            interimTranscript={interimTranscript}
           />
         </div>
       </div>
+
+      {/* Floating Mic Pill */}
+      <MicPill
+        onTranscript={(text) => {
+          setInput((prev) => prev + (prev ? " " : "") + text);
+          setInterimTranscript("");
+        }}
+        onInterimTranscript={setInterimTranscript}
+        disabled={isProcessing}
+      />
     </div>
   );
 }

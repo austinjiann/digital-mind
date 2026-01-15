@@ -9,6 +9,7 @@ interface ChatInputProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   disabled?: boolean;
+  interimTranscript?: string;
 }
 
 export function ChatInput({
@@ -16,6 +17,7 @@ export function ChatInput({
   onChange,
   onSubmit,
   disabled,
+  interimTranscript,
 }: ChatInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -44,8 +46,8 @@ export function ChatInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type..."
-          className="flex-1 bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none"
+          placeholder={interimTranscript || "Type..."}
+          className="flex-1 bg-transparent text-gray-200 placeholder-gray-400 focus:outline-none"
           disabled={disabled}
         />
 
