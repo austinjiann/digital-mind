@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import { AgentConnection } from "@/lib/websocket";
 import { StreamingAudioPlayer } from "@/lib/audio-player";
 import { AudioRecorder } from "@/lib/audio-recorder";
+import { getRandomSuggestions } from "@/components/chat/suggested-questions";
 
 export default function CallPage() {
   const router = useRouter();
@@ -26,6 +27,9 @@ export default function CallPage() {
   // Refs to avoid stale closures in speech recognition handlers
   const isRecordingRef = useRef(false);
   const isSpeakingRef = useRef(false);
+
+  // Get random suggestions from shared pool
+  const suggestions = useMemo(() => getRandomSuggestions(4), []);
 
   // Call timer - only starts when mic is first tapped
   useEffect(() => {
@@ -408,12 +412,7 @@ export default function CallPage() {
               transition={{ delay: 0.3 }}
               className="flex flex-wrap justify-center gap-2 max-w-md mt-4"
             >
-              {[
-                "What are you working on?",
-                "Tell me about yourself",
-                "What's your tech stack?",
-                "Any fun projects?",
-              ].map((suggestion) => (
+              {suggestions.map((suggestion) => (
                 <button
                   key={suggestion}
                   onClick={() => {

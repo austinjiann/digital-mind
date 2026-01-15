@@ -90,28 +90,31 @@ export class StreamingAudioPlayer {
       source.buffer = audioBuffer;
       source.connect(this.audioContext.destination);
 
-      // Schedule playback (gapless)
+      // Schedule playback (gapless) with small buffer to prevent cutoff
       const startTime = Math.max(
         this.scheduledEndTime,
         this.audioContext.currentTime
       );
       source.start(startTime);
 
-      this.scheduledEndTime = startTime + audioBuffer.duration;
+      // Add small buffer (50ms) to prevent last word cutoff
+      this.scheduledEndTime = startTime + audioBuffer.duration + 0.05;
       this.sources.push(source);
 
-      // Cleanup when done
+      // Cleanup when done - add delay to ensure audio fully plays
       source.onended = () => {
-        const idx = this.sources.indexOf(source);
-        if (idx !== -1) this.sources.splice(idx, 1);
+        setTimeout(() => {
+          const idx = this.sources.indexOf(source);
+          if (idx !== -1) this.sources.splice(idx, 1);
 
-        // Check if all audio has finished
-        if (this.sources.length === 0) {
-          this.isPlaying = false;
-          if (this.onEndCallback) {
-            this.onEndCallback();
+          // Check if all audio has finished
+          if (this.sources.length === 0) {
+            this.isPlaying = false;
+            if (this.onEndCallback) {
+              this.onEndCallback();
+            }
           }
-        }
+        }, 100); // 100ms delay to ensure full playback
       };
     } catch (error) {
       console.error("[AudioPlayer] Error decoding audio:", error);

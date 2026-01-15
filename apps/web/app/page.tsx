@@ -56,8 +56,16 @@ export default function Chat() {
   }, [messages, currentResponse]);
 
   useEffect(() => {
-    // Initialize audio player
+    // Initialize audio player with callback for when playback finishes
     audioPlayerRef.current = new StreamingAudioPlayer();
+    audioPlayerRef.current.onEnd(() => {
+      // Only clear reading state when audio actually finishes playing
+      if (isPlayingReadAloudRef.current) {
+        isPlayingReadAloudRef.current = false;
+        readingMessageIdRef.current = null;
+        setReadingMessageId(null);
+      }
+    });
 
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002";
     const conn = new AgentConnection(wsUrl);
@@ -87,12 +95,8 @@ export default function Chat() {
             }
             await audioPlayerRef.current?.addChunk(event.audio, event.chunk_index);
           }
-          // Only clear reading state if we were actually playing read-aloud audio
-          if (event.is_last && isPlayingReadAloudRef.current) {
-            isPlayingReadAloudRef.current = false;
-            readingMessageIdRef.current = null;
-            setReadingMessageId(null);
-          }
+          // Note: Reading state is cleared by audio player's onEnd callback
+          // when playback actually finishes, not when is_last arrives
           break;
 
         case "agent.text_complete": {

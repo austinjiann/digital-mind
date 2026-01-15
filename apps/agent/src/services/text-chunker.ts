@@ -2,19 +2,47 @@
  * Splits streaming text into speakable segments.
  * Goal: Get first audio chunk ASAP while maintaining natural speech.
  */
+
+// Varied filler words for natural pauses
+const FILLERS = [
+  "Um,",
+  "Uh,",
+  "Hmm,",
+  "So,",
+  "Well,",
+  "Like,",
+  "Yeah,",
+  "I mean,",
+  "You know,",
+  "Basically,",
+];
+
 export class SpeechChunker {
   private buffer = "";
-  private minChunkLength = 100; // Longer chunks = fewer pauses
-  private maxChunkLength = 400; // Allow longer chunks for smoother speech
+  private minChunkLength = 80; // Shorter chunks = more responsive
+  private maxChunkLength = 300; // Shorter max for faster delivery
   private isFirstChunk = true;
   private useFiller: boolean;
+  private lastFillerIndex = -1;
 
   /**
-   * @param useFiller - Whether to add "Um," fillers between chunks (default true).
+   * @param useFiller - Whether to add filler words between chunks (default true).
    *                    Set to false for read-aloud of prepared text.
    */
   constructor(useFiller = true) {
     this.useFiller = useFiller;
+  }
+
+  /**
+   * Get a random filler word, avoiding repeating the last one used.
+   */
+  private getRandomFiller(): string {
+    let index: number;
+    do {
+      index = Math.floor(Math.random() * FILLERS.length);
+    } while (index === this.lastFillerIndex && FILLERS.length > 1);
+    this.lastFillerIndex = index;
+    return FILLERS[index];
   }
 
   /**
@@ -26,10 +54,10 @@ export class SpeechChunker {
       this.isFirstChunk = false;
       return chunk;
     }
-    // Add "Um," at the start to fill the gap after previous chunk
+    // Add a varied filler at the start to fill the gap after previous chunk
     // Only for streaming responses, not read-aloud
     if (this.useFiller) {
-      return "Um, " + chunk;
+      return this.getRandomFiller() + " " + chunk;
     }
     return chunk;
   }
@@ -87,5 +115,6 @@ export class SpeechChunker {
   reset() {
     this.buffer = "";
     this.isFirstChunk = true;
+    this.lastFillerIndex = -1;
   }
 }

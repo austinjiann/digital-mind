@@ -319,14 +319,8 @@ async function handleRequestTTS(
       chunks.push(finalChunk);
     }
 
-    // Process chunks with pauses for natural spacing (like streaming)
-    for (let i = 0; i < chunks.length; i++) {
-      let chunk = chunks[i];
-      // Add pause marker for non-final chunks to create natural breaks
-      // Using ". . ." with spaces prevents the cleanText collapse and creates a pause
-      if (i < chunks.length - 1) {
-        chunk = chunk.trimEnd() + " . . .";
-      }
+    // Process chunks - natural speech flow without artificial pauses
+    for (const chunk of chunks) {
       const chunkIndex = audioChunkIndex++;
       ttsQueue.push(processSpeechChunk(chunk, chunkIndex));
     }

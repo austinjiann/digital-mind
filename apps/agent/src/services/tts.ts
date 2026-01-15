@@ -78,10 +78,25 @@ export class TTSClient {
   ];
 
   /**
+   * Convert number abbreviations to spoken form
+   */
+  private expandNumberAbbreviations(text: string): string {
+    return text
+      // Handle decimals with k/m/b (e.g., 1.5k, 2.5M)
+      .replace(/(\d+(?:\.\d+)?)\s*[kK]\b/g, "$1 thousand")
+      .replace(/(\d+(?:\.\d+)?)\s*[mM]\b/g, "$1 million")
+      .replace(/(\d+(?:\.\d+)?)\s*[bB]\b/g, "$1 billion")
+      .replace(/(\d+(?:\.\d+)?)\s*[tT]\b/g, "$1 trillion");
+  }
+
+  /**
    * Clean text for TTS - remove problematic characters and fix pronunciation
    */
   private cleanText(text: string): string {
     let cleaned = text;
+
+    // Expand number abbreviations first
+    cleaned = this.expandNumberAbbreviations(cleaned);
 
     // Replace tech terms with pronunciations
     for (const [pattern, pronunciation] of this.techTerms) {

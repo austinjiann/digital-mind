@@ -1,15 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronUpIcon, ChevronDownIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 
-const SUGGESTIONS = [
-  "What are PlayCreate and FlowBoard?",
-  "What languages and frameworks do you use?",
-  "What's your background?",
-  "What are you working on right now?",
+export const ALL_SUGGESTIONS = [
+  // Impressive/recruiter-friendly
+  "What's your most impressive project?",
+  "Tell me about Waterloo",
+  "What makes you stand out?",
+  "What are your career goals?",
+  // Projects
+  "What's PlayCreate about?",
+  "Tell me about FlowBoard",
+  "What are you building right now?",
+  // Personal/fun
+  "What do you do for fun?",
+  "How did you get into coding?",
+  "What motivates you?",
+  // Career
+  "What's your dream job?",
+  "Startup or big tech?",
+  "Where do you see yourself in 5 years?",
+
+  //Random
+  "Tell me about how you got flown out to San Francisco.",
+  "How did going viral feel?",
 ];
+
+export function getRandomSuggestions(count: number = 4): string[] {
+  return [...ALL_SUGGESTIONS]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, count);
+}
 
 interface SuggestedQuestionsProps {
   onSelect: (question: string) => void;
@@ -18,6 +41,9 @@ interface SuggestedQuestionsProps {
 
 export function SuggestedQuestions({ onSelect, disabled }: SuggestedQuestionsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Shuffle suggestions on each render when collapsed
+  const suggestions = useMemo(() => getRandomSuggestions(), [isExpanded]);
 
   return (
     <div className="w-full">
@@ -45,9 +71,9 @@ export function SuggestedQuestions({ onSelect, disabled }: SuggestedQuestionsPro
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="mt-3 space-y-2 overflow-hidden"
           >
-            {SUGGESTIONS.map((suggestion, index) => (
+            {suggestions.map((suggestion, index) => (
               <motion.button
-                key={suggestion}
+                key={`${suggestion}-${index}`}
                 onClick={() => onSelect(suggestion)}
                 disabled={disabled}
                 initial={{ opacity: 0, x: -20 }}
