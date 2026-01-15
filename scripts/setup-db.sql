@@ -41,24 +41,6 @@ alter table chunks add column fts tsvector
 generated always as (to_tsvector('english', content)) stored;
 create index chunks_fts_idx on chunks using gin(fts);
 
--- Conversations table (optional, for history)
-create table conversations (
-  id uuid primary key default gen_random_uuid(),
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
-create table messages (
-  id uuid primary key default gen_random_uuid(),
-  conversation_id uuid references conversations(id) on delete cascade,
-  role text not null, -- 'user' or 'assistant'
-  content text not null,
-  audio_url text, -- If message was spoken
-  sources jsonb, -- Chunk IDs used for this response
-  latency_ms jsonb, -- {stt, retrieval, llm, tts}
-  created_at timestamptz default now()
-);
-
 -- Vector similarity search function
 create or replace function match_chunks(
   query_embedding vector(1536),

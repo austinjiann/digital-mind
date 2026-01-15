@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronUpIcon, ChevronDownIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 
@@ -41,9 +41,12 @@ interface SuggestedQuestionsProps {
 
 export function SuggestedQuestions({ onSelect, disabled }: SuggestedQuestionsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // Shuffle suggestions on each render when collapsed
-  const suggestions = useMemo(() => getRandomSuggestions(), [isExpanded]);
+  // Only randomize on client after hydration
+  useEffect(() => {
+    setSuggestions(getRandomSuggestions());
+  }, [isExpanded]);
 
   return (
     <div className="w-full">

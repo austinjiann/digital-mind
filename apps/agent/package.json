@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run src/index.ts"
+    "start": "bun run src/index.ts",
+    "ingest": "bun run scripts/ingest-kb.ts"
   },
   "dependencies": {
     "@digital-mind/shared": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "openai": "^4.24.0",
-    "@deepgram/sdk": "^3.0.0"
+    "gpt-tokenizer": "^2.1.2"
   },
   "devDependencies": {
     "@types/bun": "latest",

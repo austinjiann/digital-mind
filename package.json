@@ -10,9 +10,8 @@
   "scripts": {
     "dev": "bun run --parallel dev:*",
     "dev:web": "cd apps/web && bun run dev",
-    "dev:api": "cd apps/api && bun run --hot src/index.ts",
     "dev:agent": "cd apps/agent && bun run --hot src/index.ts",
-    "ingest": "cd apps/api && bun run src/scripts/ingest-kb.ts"
+    "ingest": "cd apps/agent && bun run scripts/ingest-kb.ts"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

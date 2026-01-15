@@ -22,7 +22,7 @@ const supabase = createClient(
 const openai = new OpenAI();
 
 // Configuration
-const KB_PATH = join(import.meta.dir, "../../../../kb");
+const KB_PATH = join(import.meta.dir, "../../../kb");
 const MAX_TOKENS = 512;
 
 interface ParsedFile {
@@ -54,14 +54,14 @@ function parseFrontmatter(text: string): { frontmatter: Record<string, any>; con
     const colonIdx = line.indexOf(":");
     if (colonIdx > 0) {
       const key = line.slice(0, colonIdx).trim();
-      let value = line.slice(colonIdx + 1).trim();
+      const value = line.slice(colonIdx + 1).trim();
 
       // Handle arrays like [tag1, tag2]
       if (value.startsWith("[") && value.endsWith("]")) {
-        value = value.slice(1, -1).split(",").map(s => s.trim());
+        frontmatter[key] = value.slice(1, -1).split(",").map(s => s.trim());
+      } else {
+        frontmatter[key] = value;
       }
-
-      frontmatter[key] = value;
     }
   }
 

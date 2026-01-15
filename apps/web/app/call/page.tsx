@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { AgentConnection } from "@/lib/websocket";
 import { StreamingAudioPlayer } from "@/lib/audio-player";
-import { AudioRecorder } from "@/lib/audio-recorder";
 import { getRandomSuggestions } from "@/components/chat/suggested-questions";
 
 export default function CallPage() {
@@ -21,15 +20,17 @@ export default function CallPage() {
 
   const connectionRef = useRef<AgentConnection | null>(null);
   const audioPlayerRef = useRef<StreamingAudioPlayer | null>(null);
-  const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Refs to avoid stale closures in speech recognition handlers
   const isRecordingRef = useRef(false);
   const isSpeakingRef = useRef(false);
 
-  // Get random suggestions from shared pool
-  const suggestions = useMemo(() => getRandomSuggestions(4), []);
+  // Get random suggestions from shared pool (only on client to avoid hydration mismatch)
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    setSuggestions(getRandomSuggestions(4));
+  }, []);
 
   // Call timer - only starts when mic is first tapped
   useEffect(() => {
@@ -127,7 +128,6 @@ export default function CallPage() {
 
     return () => {
       conn.disconnect();
-      audioRecorderRef.current?.stop();
       recognitionRef.current?.stop();
     };
   }, []);
@@ -136,7 +136,6 @@ export default function CallPage() {
     if (isRecording) {
       // Stop recording
       recognitionRef.current?.stop();
-      audioRecorderRef.current?.stop();
       setIsRecording(false);
     } else {
       // Start recording with speech recognition
@@ -193,7 +192,6 @@ export default function CallPage() {
   const handleEndCall = () => {
     // Stop everything and reset state (don't navigate away)
     audioPlayerRef.current?.stop();
-    audioRecorderRef.current?.stop();
     recognitionRef.current?.stop();
 
     // Interrupt any ongoing response
