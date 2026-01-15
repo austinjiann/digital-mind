@@ -107,7 +107,8 @@ export class SpeechChunker {
     if (this.buffer.trim()) {
       const chunk = this.buffer.trim();
       this.buffer = "";
-      return this.maybeAddFiller(chunk);
+      // Don't add filler to final chunk - it sounds unnatural
+      return chunk;
     }
     return null;
   }
