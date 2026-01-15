@@ -209,32 +209,6 @@ export default function Chat() {
       {/* Scrollable messages area */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto w-full px-4 py-4 space-y-6">
-          {/* Latency HUD */}
-        <AnimatePresence>
-          {latency && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-xs text-gray-500 py-2 font-mono bg-dm-surface/80 backdrop-blur-sm border border-dm-border rounded-lg mt-4 px-3"
-            >
-              <span className="mr-3">Retrieval: {latency.retrieval_ms}ms</span>
-              <span className="mr-3">LLM TTFT: {latency.llm_first_token_ms}ms</span>
-              <span className="mr-3">LLM: {latency.llm_total_ms}ms</span>
-              {latency.tts_first_chunk_ms !== undefined && (
-                <span className="mr-3">TTS TTFC: {latency.tts_first_chunk_ms}ms</span>
-              )}
-              {latency.tts_total_ms !== undefined && (
-                <span className="mr-3">TTS: {latency.tts_total_ms}ms</span>
-              )}
-              <span className="font-bold text-dm-accent">
-                Total: {latency.total_ms}ms
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-
         {/* Messages */}
         <div className="space-y-6">
           {/* Welcome message */}

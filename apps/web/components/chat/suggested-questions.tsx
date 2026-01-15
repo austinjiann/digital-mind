@@ -4,15 +4,15 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronUpIcon, ChevronDownIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 
-export const ALL_SUGGESTIONS = [
+const ALL_SUGGESTIONS = [
   // Impressive/recruiter-friendly
   "What's your most impressive project?",
-  "Tell me about Waterloo",
+  "Tell me about Waterloo.",
   "What makes you stand out?",
   "What are your career goals?",
   // Projects
   "What's PlayCreate about?",
-  "Tell me about FlowBoard",
+  "Tell me about FlowBoard.",
   "What are you building right now?",
   // Personal/fun
   "What do you do for fun?",
@@ -28,10 +28,10 @@ export const ALL_SUGGESTIONS = [
   "How did going viral feel?",
 ];
 
-export function getRandomSuggestions(count: number = 4): string[] {
+function getRandomSuggestions(): string[] {
   return [...ALL_SUGGESTIONS]
     .sort(() => Math.random() - 0.5)
-    .slice(0, count);
+    .slice(0, 4);
 }
 
 interface SuggestedQuestionsProps {
