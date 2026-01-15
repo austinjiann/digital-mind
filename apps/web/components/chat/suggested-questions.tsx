@@ -28,10 +28,10 @@ const ALL_SUGGESTIONS = [
   "How did going viral feel?",
 ];
 
-function getRandomSuggestions(): string[] {
+export function getRandomSuggestions(count = 4): string[] {
   return [...ALL_SUGGESTIONS]
     .sort(() => Math.random() - 0.5)
-    .slice(0, 4);
+    .slice(0, count);
 }
 
 interface SuggestedQuestionsProps {
